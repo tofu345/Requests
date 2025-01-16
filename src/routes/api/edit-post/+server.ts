@@ -27,7 +27,9 @@ export const POST: RequestHandler = async function ({ request, locals }) {
         return errorRes(400, error.details.map((v) => v.message).join("\n"));
     }
 
-    if (locals.admin || data.id || editableExists(data.id)) {
+    let editAllowed =
+        locals.admin || (data.id !== undefined && editableExists(data.id));
+    if (editAllowed) {
         let post = null;
         try {
             post = await editPost(value.postId, value.text, value.postType);
@@ -40,5 +42,6 @@ export const POST: RequestHandler = async function ({ request, locals }) {
 
         return json({ post });
     }
+
     return errorRes(401, "unauthorized");
 };

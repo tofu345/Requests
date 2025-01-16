@@ -94,7 +94,8 @@ async function completeEditPost() {
 
     if (res.status !== 200) {
         currentState = States.textarea;
-        newNotification(res.data, NotifType.error);
+        newNotification("Unable to perform update", NotifType.error);
+        console.error(res);
         return;
     }
 
