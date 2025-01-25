@@ -63,11 +63,11 @@ function editable(postId: number): boolean {
 }
 
 // undefined for admin
-let editing: {editId: string | undefined, postId: number, idx: number} | null = null;
+let currentPostEdit: {editId: string | undefined, postId: number, postListIdx: number} | null = $state(null);
 
-async function startEditPost(postId: number) {
-    if (editing !== null) {
-        return newNotification("Already editing", NotifType.warning);
+async function startPostEdit(postId: number) {
+    if (currentPostEdit !== null) {
+        return newNotification("Already editing", NotifType.warning, 2000);
     }
     if (text !== "") {
         return newNotification("Unsubmitted request", NotifType.warning);
@@ -75,18 +75,18 @@ async function startEditPost(postId: number) {
 
     let idx = posts.findIndex(el => el.id == postId);
     let post = posts[idx];
-    editing = { postId, idx, editId: userEditables.find(el => el.postId == postId)?.id };
+    currentPostEdit = { postId, postListIdx: idx, editId: userEditables.find(el => el.postId == postId)?.id };
 
     text = post.text;
     currentState = States.textarea;
     postType = null;
 }
 
-async function completeEditPost() {
+async function completePostEdit() {
     const res: AxiosResponse = await axios
         .post("/api/edit-post", {
-            id: editing!.editId,
-            postId: editing!.postId,
+            id: currentPostEdit!.editId,
+            postId: currentPostEdit!.postId,
             text, postType,
         })
         .then(res => res)
@@ -99,8 +99,12 @@ async function completeEditPost() {
         return;
     }
 
-    posts[editing!.idx] = res.data.post;
-    editing = null;
+    posts[currentPostEdit!.postListIdx] = res.data.post;
+    abortPostEdit();
+}
+
+async function abortPostEdit() {
+    currentPostEdit = null;
     text = "";
     postType = null;
     currentState = States.button;
@@ -133,8 +137,8 @@ function errorAnimation() {
 }
 
 async function submitForm(_event: Event) {
-    if (editing !== null) {
-        return completeEditPost();
+    if (currentPostEdit !== null) {
+        return completePostEdit();
     }
 
     if (text === "") {
@@ -171,12 +175,12 @@ async function submitForm(_event: Event) {
     currentState = States.button;
 }
 
-// autoExpand textarea
-function autoExpand (obj: any) {
+function autoExpandTextarea(obj: any) {
     obj.style.height = Math.min(obj.scrollHeight, 150) + "px";
 }
 
 function focusOnCreate(el: HTMLTextAreaElement) {
+    autoExpandTextarea(el);
     el.focus();
 }
 
@@ -187,13 +191,16 @@ const NotifType = {
 }
 let notifications: {id: number, type: number, msg: string}[] = $state([]);
 
-function newNotification(msg: string, type: number) {
+function newNotification(msg: string, type: number, timeout?: number) {
     if (typeof msg == 'object') msg = JSON.stringify(msg);
     let id = Math.max(...notifications.map(v => v.id)) + 1;
     if (notifications.length === 0) {
         id = 0;
     }
     notifications.push({ id, type, msg });
+    if (timeout) {
+        setTimeout(() => delNotifById(id), timeout);
+    }
 }
 
 function delNotifById(id: number) {
@@ -295,17 +302,23 @@ onMount(async () => {
                                             <img src="/trash.svg" alt="trash" />
                                         </button>
                                     {/if}
-                                    {#if data.admin || editable(post.id)}
+                                    {#if currentPostEdit !== null && currentPostEdit.postId == post.id}
                                         <button
-                                            onclick={() => startEditPost(post.id)}
+                                            onclick={() => abortPostEdit()}
+                                            class="bg-red-400 p-1 flex gap-1 justify-center items-center rounded border border-transparent">
+                                            <p class="text-black text-sm leading-none"> Cancel Edit </p>
+                                            <img width="10" src="/close.svg" alt="" />
+                                        </button>
+                                    {:else if data.admin || editable(post.id)}
+                                        <button
+                                            onclick={() => startPostEdit(post.id)}
                                             class="bg-blue-400 p-1 flex justify-center items-center rounded border border-transparent">
                                             <img width="10" src="/edit.svg" alt="edit" />
                                         </button>
                                     {/if}
                                 </div>
                             </div>
-                            <p
-                                class="text-xs text-gray-300 w-fit whitespace-nowrap">
+                            <p class="text-xs text-gray-300 w-fit whitespace-nowrap">
                                 {moment(post.createdAt).format("ddd Do MMM")}
                             </p>
                         </div>
@@ -400,10 +413,7 @@ onMount(async () => {
             />
             <button
                 class="w-8 h-full mx-5 rounded"
-                onclick={() => {
-                    currentState = States.textarea;
-                    setTimeout(() => autoExpand(document.getElementById("textarea")), 50);
-                }}>
+                onclick={() => { currentState = States.textarea; }}>
                 <img
                     id="errorSvg"
                     src="/error.svg"
@@ -424,7 +434,7 @@ onMount(async () => {
             <textarea
                 {disabled}
                 bind:value={text}
-                oninput={(e) => autoExpand(e.target)}
+                oninput={(e) => autoExpandTextarea(e.target)}
                 onkeypress={submitOnShiftEnter}
                 rows="1"
                 placeholder=""
@@ -435,7 +445,7 @@ onMount(async () => {
             ></textarea>
             <button
                 onclick={() => {
-                    if (text === "") { return errorAnimation();}
+                    if (text === "") { return errorAnimation(); }
                     currentState = States.select;
                 }}
                 class="bg-transparent p-1 absolute top-[0.25rem] right-1">
