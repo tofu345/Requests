@@ -64,6 +64,7 @@ function editable(postId: number): boolean {
 
 // undefined for admin
 let currentPostEdit: {editId: string | undefined, postId: number, postListIdx: number} | null = $state(null);
+const editing = (id: number) => currentPostEdit !== null && currentPostEdit.postId == id;
 
 async function startPostEdit(postId: number) {
     if (currentPostEdit !== null) {
@@ -164,7 +165,7 @@ async function submitForm(_event: Event) {
 
     if (res.status === 400) {
         currentState = States.textarea;
-        newNotification(res.data, NotifType.error);
+        newNotification(res.data.message || res.data, NotifType.error);
         return errorAnimation();
     }
 
@@ -294,19 +295,21 @@ onMount(async () => {
                         </div>
                         <div class="mx-2 flex flex-col w-fit gap-1">
                             <div class="h-full">
-                                <div class="flex gap-2">
+                                <div
+                                    class="flex gap-2"
+                                    class:flex-col={editing(post.id) && post.text.length > 38}>
                                     {#if data.admin}
                                         <button
                                             onclick={() => deletePost(post.id)}
-                                            class="bg-red-400 rounded border border-transparent">
+                                            class="w-fit bg-red-400 rounded border border-transparent">
                                             <img src="/trash.svg" alt="trash" />
                                         </button>
                                     {/if}
-                                    {#if currentPostEdit !== null && currentPostEdit.postId == post.id}
+                                    {#if editing(post.id)}
                                         <button
                                             onclick={() => abortPostEdit()}
                                             class="bg-red-400 p-1 flex gap-1 justify-center items-center rounded border border-transparent">
-                                            <p class="text-black text-sm leading-none"> Cancel Edit </p>
+                                            <p class="text-black text-sm leading-none"> Cancel </p>
                                             <img width="10" src="/close.svg" alt="" />
                                         </button>
                                     {:else if data.admin || editable(post.id)}
@@ -445,7 +448,7 @@ onMount(async () => {
             ></textarea>
             <button
                 onclick={() => {
-                    if (text === "") { return errorAnimation(); }
+                    if (text.trim() === "") { return errorAnimation(); }
                     currentState = States.select;
                 }}
                 class="bg-transparent p-1 absolute top-[0.25rem] right-1">
