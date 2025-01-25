@@ -142,6 +142,7 @@ async function submitForm(_event: Event) {
         return completePostEdit();
     }
 
+    text = text.trim();
     if (text === "") {
         return errorAnimation();
     }
@@ -155,10 +156,7 @@ async function submitForm(_event: Event) {
     submitErr = false;
 
     const res: AxiosResponse = await axios
-        .post("/api/create-post", {
-            text: text.trim(),
-            postType: postType
-        })
+        .post("/api/create-post", { text, postType })
         .then((res) => res)
         .catch((err) => err.response);
     postType = null;
