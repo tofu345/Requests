@@ -219,16 +219,20 @@ const pollingFunction = async function () {
         .then((res) => res)
         .catch((err) => err.response);
 
-    let lastChange = parseDate(res1.data);
-    if (lastChange > lastPoll) {
-        lastPoll = new Date();
-        const res: AxiosResponse = await axios
-            .get("/api/get-posts")
-            .then((res) => res)
-            .catch((err) => err.response);
+    if (res1.status !== 200) {
+        console.error(res1);
+    } else {
+        let lastChange = parseDate(res1.data);
+        if (lastChange > lastPoll) {
+            const res: AxiosResponse = await axios
+                .get("/api/get-posts")
+                .then((res) => res)
+                .catch((err) => err.response);
 
-        if (res.status === 200) {
-            filterPosts(res.data);
+            if (res.status === 200) {
+                lastPoll = new Date();
+                filterPosts(res.data);
+            }
         }
     }
 
