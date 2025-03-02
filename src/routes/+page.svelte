@@ -20,7 +20,7 @@ type PostType = PageData["posts"];
 
 let posts: PostType = $state([]);
 let oldPosts: PostType = $state([]);
-let oldPostsShown = $state(false);
+let oldPostsShown = $state(true);
 
 function parseDate(date: string | Date): Date {
     if (typeof date === 'string') {
@@ -206,26 +206,31 @@ function delNotifById(id: number) {
     notifications = notifications.filter(v => v.id !== id);
 }
 
-let runInterval = true;
+const getInterval = function () {
+    let today = new Date();
+    return today.getDay() === 0 ? 10000 : 60000;
+}
+
+const pollingFunction = async function () {
+    const res: AxiosResponse = await axios
+        .get("/api/get-posts")
+        .then((res) => res)
+        .catch((err) => err.response);
+
+    if (res.status === 200) {
+        filterPosts(res.data);
+    }
+
+    // surely this infinite recursion will not cause any problems
+    // nvm, https://stackoverflow.com/a/54443904
+    setTimeout(pollingFunction, getInterval());
+}
 
 onMount(async () => {
     loading = false;
     filterPosts(data.posts);
 
-    window.addEventListener("blur", () => runInterval = false);
-    window.addEventListener("focus", () => runInterval = true);
-    setInterval(async function(){
-        if (!runInterval) return;
-
-        const res: AxiosResponse = await axios
-            .get("/api/get-posts")
-            .then((res) => res)
-            .catch((err) => err.response);
-
-        if (res.status === 200) {
-            filterPosts(res.data);
-        }
-    }, 60000); // every min
+    setTimeout(pollingFunction, getInterval());
 });
 </script>
 

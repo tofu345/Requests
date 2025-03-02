@@ -49,7 +49,7 @@ export async function createPost(
     });
 }
 
-// TODO
+// TODO, for what?
 export async function editPost(
     id: number,
     text: string,
