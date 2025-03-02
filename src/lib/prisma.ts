@@ -6,8 +6,11 @@ import type Prisma from "@prisma/client";
 const prisma = new PrismaClient();
 export let cache: Prisma.Post[] | null = null;
 
+export let lastChange: Date = new Date(); // last (create, edit, delete) made
+
 export function clearCache() {
     cache = null;
+    lastChange = new Date();
 }
 
 export function startOfLastWeek(): Date {

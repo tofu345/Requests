@@ -211,14 +211,25 @@ const getInterval = function () {
     return today.getDay() === 0 ? 10000 : 60000;
 }
 
+let lastPoll = new Date();
+
 const pollingFunction = async function () {
-    const res: AxiosResponse = await axios
-        .get("/api/get-posts")
+    const res1: AxiosResponse = await axios
+        .get("/api/poll")
         .then((res) => res)
         .catch((err) => err.response);
 
-    if (res.status === 200) {
-        filterPosts(res.data);
+    let lastChange = parseDate(res1.data);
+    if (lastChange > lastPoll) {
+        lastPoll = new Date();
+        const res: AxiosResponse = await axios
+            .get("/api/get-posts")
+            .then((res) => res)
+            .catch((err) => err.response);
+
+        if (res.status === 200) {
+            filterPosts(res.data);
+        }
     }
 
     // surely this infinite recursion will not cause any problems
