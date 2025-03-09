@@ -19,3 +19,27 @@
 .flex-center {
     @apply flex justify-center items-center;
 }
+
+/* width */
+::-webkit-scrollbar {
+    width: 15px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+    background: transparent; 
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    margin-right: 7px;
+    width: 12px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    @apply rounded-lg bg-gray-500
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400
+}

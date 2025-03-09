@@ -288,7 +288,7 @@ onMount(async () => {
             <p> Loading... </p>
         </div>
     {:else}
-        <div class="centered min-h-[25rem] max-h-[80svh] overflow-auto p-2 container-bg">
+        <div class="centered min-h-[10rem] max-h-[80svh] overflow-auto p-2 py-3 container-bg">
             <div class="flex flex-col gap-2">
                 <!-- PostList -->
                 {#each posts as post (post.id)}
@@ -364,7 +364,7 @@ onMount(async () => {
             {/if}
 
             {#if oldPostsShown && oldPosts.length != 0}
-                <div transition:slide={{ duration: 1000 }}>
+                <div transition:slide={{ duration: 500 }}>
                     <div class="flex flex-col gap-2">
                         <!-- OldPostList -->
                         {#each oldPosts as post (post.id)}
