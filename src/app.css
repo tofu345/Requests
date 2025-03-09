@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.centered {
+    width: 100%;
+}
+
+@media (min-width: 640px) {
+    .centered {
+        width: 80%;
+    }
+}
+
+.container-bg {
+    @apply rounded-lg border border-gray-500;
+}
+
+.flex-center {
+    @apply flex justify-center items-center;
+}

@@ -56,38 +56,34 @@ async function deletePost(id: number) {
 let userEditables: {id: string, postId: number}[] = [];
 
 function editable(postId: number): boolean {
-    for (const el of userEditables) {
-        if (el.postId === postId) return true;
-    }
-    return false;
+    return userEditables.find((el) => el.postId == postId) !== undefined;
 }
 
 // undefined for admin
-let currentPostEdit: {editId: string | undefined, postId: number, postListIdx: number} | null = $state(null);
-const editing = (id: number) => currentPostEdit !== null && currentPostEdit.postId == id;
+let currentEdit: {editId: string | undefined, postId: number, postListIdx: number} | null = $state(null);
+const editing = (id: number) => currentEdit !== null && currentEdit.postId == id;
 
-async function startPostEdit(postId: number) {
-    if (currentPostEdit !== null) {
+async function startEdit(postId: number) {
+    if (currentEdit !== null) {
         return newNotification("Already editing", NotifType.warning, 2000);
     }
-    if (text !== "") {
-        return newNotification("Unsubmitted request", NotifType.warning);
+    if (text.trim() !== "") {
+        return newNotification("Unsubmitted request\nDelete to continue", NotifType.warning);
     }
 
     let idx = posts.findIndex(el => el.id == postId);
-    let post = posts[idx];
-    currentPostEdit = { postId, postListIdx: idx, editId: userEditables.find(el => el.postId == postId)?.id };
+    currentEdit = { postId, postListIdx: idx, editId: userEditables.find(el => el.postId == postId)?.id };
 
-    text = post.text;
+    text = posts[idx].text;
     currentState = States.textarea;
     postType = null;
 }
 
-async function completePostEdit() {
+async function completeEdit() {
     const res: AxiosResponse = await axios
         .post("/api/edit-post", {
-            id: currentPostEdit!.editId,
-            postId: currentPostEdit!.postId,
+            editId: currentEdit!.editId,
+            postId: currentEdit!.postId,
             text, postType,
         })
         .then(res => res)
@@ -100,12 +96,12 @@ async function completePostEdit() {
         return;
     }
 
-    posts[currentPostEdit!.postListIdx] = res.data.post;
+    posts[currentEdit!.postListIdx] = res.data.post;
     abortPostEdit();
 }
 
 async function abortPostEdit() {
-    currentPostEdit = null;
+    currentEdit = null;
     text = "";
     postType = null;
     currentState = States.button;
@@ -129,7 +125,7 @@ async function submitOnShiftEnter(e: KeyboardEvent) {
     }
 }
 
-// css animation
+// wait for css animation
 function errorAnimation() {
     submitErr = true;
     setTimeout(() => {
@@ -138,8 +134,8 @@ function errorAnimation() {
 }
 
 async function submitForm(_event: Event) {
-    if (currentPostEdit !== null) {
-        return completePostEdit();
+    if (currentEdit !== null) {
+        return completeEdit();
     }
 
     text = text.trim();
@@ -216,7 +212,6 @@ let lastPoll = new Date();
 const pollingFunction = async function () {
     const res1: AxiosResponse = await axios
         .get("/api/poll")
-        .then((res) => res)
         .catch((err) => err.response);
 
     if (res1.status !== 200) {
@@ -280,22 +275,20 @@ onMount(async () => {
     </button>
 {/if}
 
-<div class="w-full flex justify-center mt-4">
+<div class="min-h-[5.2rem] h-[10svh] pt-2 pb-2 w-full flex flex-col gap-1 justify-center items-center">
     <a href="https://www.ikon.church">
         <img class="h-10" src="/IKON-Logo.png" alt="IKON" />
     </a>
-</div>
-<div class="w-full flex justify-center mb-2">
-    <p class="text-sm">Prayer and Praise Requests</p>
+    <p class="text-xs">Prayer and Praise Requests</p>
 </div>
 
-<div class="h-fit w-full p-2 sm:flex sm:justify-center">
-    <div class="p-1 py-3 rounded-lg border border-gray-500 sm:w-[80%] min-h-40 relative">
-        {#if loading}
-            <div class="w-full h-36 flex justify-center items-center text-sm italic">
-                Loading...
-            </div>
-        {:else}
+<div class="max-h-[90svh] flex flex-col items-center mx-2">
+    {#if loading}
+        <div class="h-60 centered container-bg flex-center text-sm italic">
+            <p> Loading... </p>
+        </div>
+    {:else}
+        <div class="centered min-h-[25rem] max-h-[80svh] overflow-auto p-2 container-bg">
             <div class="flex flex-col gap-2">
                 <!-- PostList -->
                 {#each posts as post (post.id)}
@@ -326,14 +319,14 @@ onMount(async () => {
                                     {#if editing(post.id)}
                                         <button
                                             onclick={() => abortPostEdit()}
-                                            class="bg-red-400 p-1 flex gap-1 justify-center items-center rounded border border-transparent">
+                                            class="bg-red-400 p-1 flex-center gap-1 rounded border border-transparent">
                                             <p class="text-black text-sm leading-none"> Cancel </p>
                                             <img width="10" src="/close.svg" alt="" />
                                         </button>
                                     {:else if data.admin || editable(post.id)}
                                         <button
-                                            onclick={() => startPostEdit(post.id)}
-                                            class="bg-blue-400 p-1 flex justify-center items-center rounded border border-transparent">
+                                            onclick={() => startEdit(post.id)}
+                                            class="bg-blue-400 p-1 flex-center rounded border border-transparent">
                                             <img width="10" src="/edit.svg" alt="edit" />
                                         </button>
                                     {/if}
@@ -345,14 +338,14 @@ onMount(async () => {
                         </div>
                     </div>
                 {:else}
-                    <div class="w-full h-36 flex justify-center items-center text-sm italic">
+                    <div class="w-full h-36 flex-center text-sm italic">
                         None yet...
                     </div>
                 {/each}
             </div>
 
             {#if oldPosts.length != 0}
-                <div class="relative h-[36px] my-1 ml-2">
+                <div class="relative h-[36px] my-1 ml-1">
                     <button
                         class="h-full w-full"
                         onclick={() => oldPostsShown = !oldPostsShown}
@@ -371,7 +364,7 @@ onMount(async () => {
             {/if}
 
             {#if oldPostsShown && oldPosts.length != 0}
-                <div transition:slide={{ duration: 300 }}>
+                <div transition:slide={{ duration: 1000 }}>
                     <div class="flex flex-col gap-2">
                         <!-- OldPostList -->
                         {#each oldPosts as post (post.id)}
@@ -405,7 +398,7 @@ onMount(async () => {
                                 </div>
                             </div>
                         {:else}
-                            <div class="w-full h-36 flex justify-center items-center text-sm italic">
+                            <div class="w-full h-36 flex-center text-sm italic">
                                 None yet...
                             </div>
                         {/each}
@@ -413,82 +406,82 @@ onMount(async () => {
 
                 </div>
             {/if}
-        {/if}
-    </div>
-</div>
-
-<div class="w-full p-2 lg:mx-50 mb-2 flex justify-center">
-    {#if currentState == States.submit}
-        <div
-            class="flex justify-center items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
-            <div class="loader"></div>
         </div>
+    {/if}
 
-    {:else if currentState == States.select}
-        <div
-            class="flex justify-between items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
-            <SelectButton
-                onclick={(e) => { postType = "PrayerRequest"; submitForm(e); }}
-                emoji={postTypeEmoji("PrayerRequest")}
-                str="Prayer Request"
-            />
-            <button
-                class="w-8 h-full mx-5 rounded"
-                onclick={() => { currentState = States.textarea; }}>
-                <img
-                    id="errorSvg"
-                    src="/error.svg"
-                    alt="error img"
-                    class="w-full"
+    <div class="w-full mt-3 mb-3 lg:mx-50 flex-center">
+        {#if currentState == States.submit}
+            <div
+                class="flex-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
+                <div class="loader"></div>
+            </div>
+
+        {:else if currentState == States.select}
+            <div
+                class="flex justify-between items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
+                <SelectButton
+                    onclick={(e) => { postType = "PrayerRequest"; submitForm(e); }}
+                    emoji={"🙏"}
+                    str="Prayer Request"
                 />
-            </button>
-            <SelectButton
-                onclick={(e) => { postType = "PraiseReport"; submitForm(e); }}
-                emoji={postTypeEmoji("PraiseReport")}
-                str="Praise Report"
-            />
-        </div>
-
-    {:else if currentState == States.textarea}
-        <div
-            class="relative w-full sm:w-[80%] h-fit p-2 rounded-lg border-2 border-gray-400 bg-gray-600 flex justify-between">
-            <textarea
-                {disabled}
-                bind:value={text}
-                oninput={(e) => autoExpandTextarea(e.target)}
-                onkeypress={submitOnShiftEnter}
-                rows="1"
-                placeholder=""
-                id="textarea"
-                class="bg-transparent w-full outline-none resize-none mr-[30px]"
-                use:focusOnCreate
-                maxlength="280"
-            ></textarea>
-            <button
-                onclick={() => {
-                    if (text.trim() === "") { return errorAnimation(); }
-                    currentState = States.select;
-                }}
-                class="bg-transparent p-1 absolute top-[0.25rem] right-1">
-                {#if submitErr}
+                <button
+                    class="w-8 h-full mx-5 rounded"
+                    onclick={() => { currentState = States.textarea; }}>
                     <img
                         id="errorSvg"
                         src="/error.svg"
                         alt="error img"
-                        class="boop pos-y-wiggle"
+                        class="w-full"
                     />
-                {:else}
-                    <img src="/send.svg" alt="send img"/>
-                {/if}
-            </button>
-        </div>
+                </button>
+                <SelectButton
+                    onclick={(e) => { postType = "PraiseReport"; submitForm(e); }}
+                    emoji={"🎉"}
+                    str="Praise Report"
+                />
+            </div>
 
-    {:else}
-        <button
-            onclick={() => {currentState = States.textarea}}
-            class="outline-none border-2 border-transparent hover:border-gray-400 bg-gray-600 rounded-lg h-[44px] w-full sm:w-[80%] p-2 text-sm"
-        > Submit Request </button>
-    {/if}
+        {:else if currentState == States.textarea}
+            <div
+                class="relative w-full sm:w-[80%] h-fit p-2 rounded-lg border-2 border-gray-400 bg-gray-600 flex justify-between">
+                <textarea
+                    {disabled}
+                    bind:value={text}
+                    oninput={(e) => autoExpandTextarea(e.target)}
+                    onkeypress={submitOnShiftEnter}
+                    rows="1"
+                    placeholder=""
+                    id="textarea"
+                    class="bg-transparent w-full outline-none resize-none mr-[30px]"
+                    use:focusOnCreate
+                    maxlength="280"
+                ></textarea>
+                <button
+                    onclick={() => {
+                        if (text.trim() === "") { return errorAnimation(); }
+                        currentState = States.select;
+                    }}
+                    class="bg-transparent p-1 absolute top-[0.25rem] right-1">
+                    {#if submitErr}
+                        <img
+                            id="errorSvg"
+                            src="/error.svg"
+                            alt="error img"
+                            class="boop pos-y-wiggle"
+                        />
+                    {:else}
+                        <img src="/send.svg" alt="send img"/>
+                    {/if}
+                </button>
+            </div>
+
+        {:else}
+            <button
+                onclick={() => {currentState = States.textarea}}
+                class="outline-none border-2 border-transparent hover:border-gray-400 bg-gray-600 rounded-lg h-[44px] w-full sm:w-[80%] p-2 text-sm"
+            > Submit Request </button>
+        {/if}
+    </div>
 </div>
 
 <style>
