@@ -298,17 +298,15 @@ onMount(async () => {
                         out:fade={{ duration: 200 }}
                         animate:flip={{ delay: 200, duration: 200 }}
                     >
-                        <div class="text-sm m-1 mr-2 self-center"> {postTypeEmoji(post.postType)} </div>
+                        <div class="text-sm mr-2 self-center"> {postTypeEmoji(post.postType)} </div>
                         <div class="bg-gray-600 rounded h-fit my-auto">
-                            <p style="overflow-wrap: break-word;" class="whitespace-pre-wrap p-1 px-2">
+                            <p style="overflow-wrap: break-word;" class="text-base whitespace-pre-wrap p-1 px-2">
                                 {post.text}
                             </p>
                         </div>
-                        <div class="mx-2 flex flex-col w-fit gap-1">
-                            <div class="h-full">
-                                <div
-                                    class="flex gap-2"
-                                    class:flex-col={editing(post.id) && post.text.length > 38}>
+                        <div class="ml-2 flex flex-col w-fit gap-1">
+                            <div class="h-full" class:w-12={editing(post.id) || data.admin || editable(post.id)}>
+                                <div class="flex gap-2">
                                     {#if data.admin}
                                         <button
                                             onclick={() => deletePost(post.id)}
@@ -319,9 +317,9 @@ onMount(async () => {
                                     {#if editing(post.id)}
                                         <button
                                             onclick={() => abortPostEdit()}
-                                            class="bg-red-400 p-1 flex-center gap-1 rounded border border-transparent">
-                                            <p class="text-black text-sm leading-none"> Cancel </p>
+                                            class="w-fit bg-red-400 p-1 flex-center gap-1 rounded border border-transparent">
                                             <img width="10" src="/close.svg" alt="" />
+                                            <!-- <p class="text-black text-sm leading-none"> Cancel </p> -->
                                         </button>
                                     {:else if data.admin || editable(post.id)}
                                         <button
@@ -332,7 +330,7 @@ onMount(async () => {
                                     {/if}
                                 </div>
                             </div>
-                            <p class="text-xs text-gray-300 w-fit whitespace-nowrap">
+                            <p class="text-xs text-gray-300 w-fit whitespace-pre-wrap">
                                 {moment(post.createdAt).format("ddd Do MMM")}
                             </p>
                         </div>
@@ -351,7 +349,7 @@ onMount(async () => {
                         onclick={() => oldPostsShown = !oldPostsShown}
                         out:fade={{ delay: 300, duration: 0 }}
                     >
-                        <div class="p-2 absolute -top-0 -left-[0.7rem] flex items-center gap-[0.4rem] cursor-pointer text-sm w-full">
+                        <div class="p-2 absolute -top-0 -left-[0.7rem] flex items-center gap-[0.5rem] cursor-pointer text-sm w-full">
                             {#if oldPostsShown}
                                 <img src="/caret-down.svg" alt="caret-down" />
                             {:else}
@@ -374,7 +372,7 @@ onMount(async () => {
                                 out:fade={{ duration: 200 }}
                                 animate:flip={{ delay: 200, duration: 200 }}
                             >
-                                <div class="text-sm m-1 mr-2 self-center"> {postTypeEmoji(post.postType)} </div>
+                                <div class="text-sm mr-2 self-center"> {postTypeEmoji(post.postType)} </div>
                                 <div class="bg-gray-600 rounded h-fit my-auto">
                                     <p
                                         style="overflow-wrap: break-word;"
@@ -392,7 +390,7 @@ onMount(async () => {
                                             </button>
                                         {/if}
                                     </div>
-                                    <p class="text-xs text-gray-300 w-fit whitespace-nowrap">
+                                    <p class="text-xs text-gray-300 w-fit whitespace-pre-wrap">
                                         {moment(post.createdAt).format("ddd Do MMM")}
                                     </p>
                                 </div>
