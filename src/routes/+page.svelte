@@ -241,6 +241,7 @@ onMount(async () => {
     filterPosts(data.posts);
 
     setTimeout(pollingFunction, getInterval());
+    window.addEventListener("focus", pollingFunction); // In case it stops
 });
 </script>
 
