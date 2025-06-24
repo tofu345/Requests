@@ -1,3 +1,3 @@
 ### Prayer Requests
 
-Prayer and Praise Requests Website for [www.ikon.church](www.ikon.church)
+Prayer and Praise Requests Website for [ikon.church](https://www.ikon.church)
