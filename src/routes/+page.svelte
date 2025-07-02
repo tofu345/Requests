@@ -277,7 +277,7 @@ onMount(async () => {
     </button>
 {/if}
 
-<div class="min-h-[5.2rem] h-[10svh] pt-2 pb-2 w-full flex flex-col gap-1 justify-center items-center">
+<div class="min-h-[5.2rem] h-[10dvh] pt-2 pb-2 w-full flex flex-col gap-1 justify-center items-center">
     <a href="https://www.ikon.church">
         <img class="h-10" src="/IKON-Logo.png" alt="IKON" />
     </a>
@@ -285,7 +285,7 @@ onMount(async () => {
 </div>
 
 <div class="flex flex-col items-center mx-2">
-    <div class="centered min-h-[10rem] max-h-[80svh] py-3 overflow-auto container-border">
+    <div class="centered min-h-60 max-h-[80dvh] py-3 overflow-auto container-border">
         {#if loading}
             <div class="h-60 flex-center text-sm italic">
                 <p> Loading... </p>
@@ -337,7 +337,7 @@ onMount(async () => {
                         </div>
                     </div>
                 {:else}
-                    <div class="w-full h-36 flex-center text-sm italic">
+                    <div class="w-full h-60 flex-center text-sm italic">
                         None yet...
                     </div>
                 {/each}
@@ -362,7 +362,7 @@ onMount(async () => {
                 </div>
             {/if}
 
-            {#if oldPostsShown && oldPosts.length != 0}
+            {#if oldPosts.length != 0 && oldPostsShown}
                 <div transition:slide={{ duration: 500 }}>
                     <div class="flex flex-col gap-2">
                         <!-- OldPostList -->
@@ -412,7 +412,7 @@ onMount(async () => {
 {#if !loading}
     <div
         in:fly={{ y: -20, delay: 200, duration: 500 }}
-        class="w-full mt-3 mb-3 lg:mx-50 flex-center">
+        class="w-full px-2 mt-3 mb-3 lg:mx-50 flex-center">
 
         {#if currentState == States.submit}
             <div
