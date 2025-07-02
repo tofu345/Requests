@@ -285,12 +285,12 @@ onMount(async () => {
 </div>
 
 <div class="flex flex-col items-center mx-2">
-    {#if loading}
-        <div class="h-60 centered container-border flex-center text-sm italic">
-            <p> Loading... </p>
-        </div>
-    {:else}
-        <div class="centered min-h-[10rem] max-h-[80svh] py-3 overflow-auto container-border">
+    <div class="centered min-h-[10rem] max-h-[80svh] py-3 overflow-auto container-border">
+        {#if loading}
+            <div class="h-60 flex-center text-sm italic">
+                <p> Loading... </p>
+            </div>
+        {:else}
             <div class="flex flex-col gap-2">
                 <!-- PostList -->
                 {#each posts as post (post.id)}
@@ -402,89 +402,91 @@ onMount(async () => {
                             </div>
                         {/each}
                     </div>
-
                 </div>
             {/if}
-        </div>
 
-        <div 
-            in:fly={{ y: -20, delay: 200, duration: 500 }}
-            class="w-full mt-3 mb-3 lg:mx-50 flex-center">
+        {/if}
+    </div>
+</div>
 
-            {#if currentState == States.submit}
-                <div
-                    class="flex-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
-                    <div class="loader"></div>
-                </div>
+{#if !loading}
+    <div
+        in:fly={{ y: -20, delay: 200, duration: 500 }}
+        class="w-full mt-3 mb-3 lg:mx-50 flex-center">
 
-            {:else if currentState == States.select}
-                <div
-                    class="flex justify-between items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
-                    <SelectButton
-                        onclick={(e) => { postType = "PrayerRequest"; submitForm(e); }}
-                        emoji={"🙏"}
-                        str="Prayer Request"
+        {#if currentState == States.submit}
+            <div
+                class="flex-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
+                <div class="loader"></div>
+            </div>
+
+        {:else if currentState == States.select}
+            <div
+                class="flex justify-between items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
+                <SelectButton
+                    onclick={(e) => { postType = "PrayerRequest"; submitForm(e); }}
+                    emoji={"🙏"}
+                    str="Prayer Request"
+                />
+                <button
+                    class="w-8 h-full mx-5 rounded"
+                    onclick={() => { currentState = States.textarea; }}>
+                    <img
+                        id="errorSvg"
+                        src="/error.svg"
+                        alt="error img"
+                        class="w-full"
                     />
-                    <button
-                        class="w-8 h-full mx-5 rounded"
-                        onclick={() => { currentState = States.textarea; }}>
+                </button>
+                <SelectButton
+                    onclick={(e) => { postType = "PraiseReport"; submitForm(e); }}
+                    emoji={"🎉"}
+                    str="Praise Report"
+                />
+            </div>
+
+        {:else if currentState == States.textarea}
+            <div
+                class="relative w-full sm:w-[80%] h-fit p-2 rounded-lg border-2 border-gray-400 bg-gray-600 flex justify-between">
+                <textarea
+                    {disabled}
+                    bind:value={text}
+                    oninput={(e) => autoExpandTextarea(e.target)}
+                    onkeypress={submitOnShiftEnter}
+                    rows="1"
+                    placeholder=""
+                    id="textarea"
+                    class="bg-transparent w-full outline-none resize-none mr-[30px]"
+                    use:focusOnCreate
+                    maxlength="280"
+                ></textarea>
+                <button
+                    onclick={() => {
+                        if (text.trim() === "") { return waitForErrorAnimation(); }
+                        currentState = States.select;
+                    }}
+                    class="bg-transparent p-1 absolute top-[0.25rem] right-1">
+                    {#if submitErr}
                         <img
                             id="errorSvg"
                             src="/error.svg"
                             alt="error img"
-                            class="w-full"
+                            class="boop pos-y-wiggle"
                         />
-                    </button>
-                    <SelectButton
-                        onclick={(e) => { postType = "PraiseReport"; submitForm(e); }}
-                        emoji={"🎉"}
-                        str="Praise Report"
-                    />
-                </div>
+                    {:else}
+                        <img src="/send.svg" alt="send img"/>
+                    {/if}
+                </button>
+            </div>
 
-            {:else if currentState == States.textarea}
-                <div
-                    class="relative w-full sm:w-[80%] h-fit p-2 rounded-lg border-2 border-gray-400 bg-gray-600 flex justify-between">
-                    <textarea
-                        {disabled}
-                        bind:value={text}
-                        oninput={(e) => autoExpandTextarea(e.target)}
-                        onkeypress={submitOnShiftEnter}
-                        rows="1"
-                        placeholder=""
-                        id="textarea"
-                        class="bg-transparent w-full outline-none resize-none mr-[30px]"
-                        use:focusOnCreate
-                        maxlength="280"
-                    ></textarea>
-                    <button
-                        onclick={() => {
-                            if (text.trim() === "") { return waitForErrorAnimation(); }
-                            currentState = States.select;
-                        }}
-                        class="bg-transparent p-1 absolute top-[0.25rem] right-1">
-                        {#if submitErr}
-                            <img
-                                id="errorSvg"
-                                src="/error.svg"
-                                alt="error img"
-                                class="boop pos-y-wiggle"
-                            />
-                        {:else}
-                            <img src="/send.svg" alt="send img"/>
-                        {/if}
-                    </button>
-                </div>
-
-            {:else}
-                <button
-                    onclick={() => {currentState = States.textarea}}
-                    class="outline-none border-2 border-transparent hover:border-gray-400 bg-gray-600 rounded-lg h-[44px] w-full sm:w-[80%] p-2 text-sm"
-                > Submit Request </button>
-            {/if}
-        </div>
-    {/if}
-</div>
+        {:else}
+            <button
+                onclick={() => {currentState = States.textarea}}
+                class="outline-none border-2 border-transparent hover:border-gray-400 bg-gray-600 rounded-lg h-[44px] w-full sm:w-[80%] p-2 text-sm"
+            > Submit Request </button>
+        {/if}
+    </div>
+{/if}
 
 <style>
 .resize-none{
