@@ -12,12 +12,17 @@
     }
 }
 
-.container-bg {
-    @apply rounded-lg border border-gray-500;
+.container-border {
+    border: 0px solid transparent;
+    @apply border border-t-gray-500 border-b-gray-500;
 }
 
 .flex-center {
     @apply flex justify-center items-center;
+}
+
+.rounded-border-transp {
+    @apply rounded border border-transparent
 }
 
 /* width */

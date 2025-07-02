@@ -1,7 +1,7 @@
 <script lang="ts">
 import axios from '$lib/axios';
 import { onMount } from 'svelte';
-import { slide, fade } from 'svelte/transition';
+import { fly, slide, fade } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 import moment from 'moment';
 
@@ -14,13 +14,24 @@ import type Prisma from '@prisma/client';
 import { postTypeEmoji } from '$lib/utils';
 
 let { data }: { data: PageData }  = $props();
-let loading = $state(true);
+const admin = data.admin && data.admin.emailAddr != "";
 
 type PostType = PageData["posts"];
 
+let loading = $state(true);
 let posts: PostType = $state([]);
 let oldPosts: PostType = $state([]);
 let oldPostsShown = $state(true);
+
+async function getPosts() {
+    const res: AxiosResponse = await axios
+        .get("/api/get-posts")
+        .then((res) => res)
+        .catch((err) => err.response);
+    if (res?.status === 200) {
+        setPostListTo(res.data);
+    }
+}
 
 function parseDate(date: string | Date): Date {
     if (typeof date === 'string') {
@@ -29,14 +40,14 @@ function parseDate(date: string | Date): Date {
     return date;
 }
 
-function filterPosts(postList: PostType): void {
+function setPostListTo(updPosts: PostType): void {
     let today = new Date();
     let dayOfWeek = today.getDay();
     let dayOfMonth = today.getDate() - (dayOfWeek == 0 ? 6 : dayOfWeek)
     let lastSunday = new Date(today.getFullYear(), today.getMonth(), dayOfMonth, 0, 0, 0);
 
-    posts = postList.filter(v => parseDate(v.createdAt) > lastSunday);
-    oldPosts = postList.filter(v => parseDate(v.createdAt) <= lastSunday);
+    posts = updPosts.filter(v => parseDate(v.createdAt) > lastSunday);
+    oldPosts = updPosts.filter(v => parseDate(v.createdAt) <= lastSunday);
 }
 
 async function deletePost(id: number) {
@@ -125,8 +136,7 @@ async function submitOnShiftEnter(e: KeyboardEvent) {
     }
 }
 
-// wait for css animation
-function errorAnimation() {
+function waitForErrorAnimation() {
     submitErr = true;
     setTimeout(() => {
         submitErr = false;
@@ -140,7 +150,7 @@ async function submitForm(_event: Event) {
 
     text = text.trim();
     if (text === "") {
-        return errorAnimation();
+        return waitForErrorAnimation();
     }
 
     if (postType === null) {
@@ -160,7 +170,7 @@ async function submitForm(_event: Event) {
     if (res.status === 400) {
         currentState = States.textarea;
         newNotification(res.data.message || res.data, NotifType.error);
-        return errorAnimation();
+        return waitForErrorAnimation();
     }
 
     let post = res.data.post;
@@ -202,12 +212,9 @@ function delNotifById(id: number) {
     notifications = notifications.filter(v => v.id !== id);
 }
 
-const getInterval = function () {
-    let today = new Date();
-    return today.getDay() === 0 ? 10000 : 60000;
-}
-
+let intervalID = 0;
 let lastPoll = new Date();
+const interval = new Date().getDay() === 0 ? 10000 : 60000; // short on sundays
 
 const pollingFunction = async function () {
     const res1: AxiosResponse = await axios
@@ -216,32 +223,26 @@ const pollingFunction = async function () {
 
     if (res1.status !== 200) {
         console.error(res1);
-    } else {
-        let lastChange = parseDate(res1.data);
-        if (lastChange > lastPoll) {
-            const res: AxiosResponse = await axios
-                .get("/api/get-posts")
-                .then((res) => res)
-                .catch((err) => err.response);
-
-            if (res.status === 200) {
-                lastPoll = new Date();
-                filterPosts(res.data);
-            }
-        }
+        return;
     }
 
-    // surely this infinite recursion will not cause any problems
-    // nvm, https://stackoverflow.com/a/54443904
-    setTimeout(pollingFunction, getInterval());
+    let lastChange = parseDate(res1.data);
+    if (lastChange > lastPoll) {
+        getPosts();
+        lastPoll = new Date();
+    }
 }
 
 onMount(async () => {
+    await getPosts();
     loading = false;
-    filterPosts(data.posts);
 
-    setTimeout(pollingFunction, getInterval());
-    window.addEventListener("focus", pollingFunction); // In case it stops
+    intervalID = window.setInterval(pollingFunction, interval);
+    // In case it stops
+    window.addEventListener("focus", () => {
+        window.clearInterval(intervalID);
+        intervalID = window.setInterval(pollingFunction, interval);
+    });
 });
 </script>
 
@@ -249,30 +250,30 @@ onMount(async () => {
 <div id="notif-wrapper" class="flex flex-col gap-3 fixed top-0 right-0 p-3 z-50">
     {#each notifications as notif (notif.id)}
         <div
+            class="h-full w-[11rem] p-3 pr-2 flex gap-4 justify-between items-center rounded-lg bg-gray-600 ring-[4px] ring-gray-600"
             in:fade={{ delay: 200, duration: 200 }}
             out:fade={{ duration: 200 }}
             animate:flip={{ delay: 200, duration: 200 }}
-            class="h-full w-[15rem] p-3 pr-2 flex gap-4 justify-between items-center rounded-lg"
             class:bg-green-800={notif.type == NotifType.info}
             class:bg-yellow-800={notif.type == NotifType.warning}
             class:bg-red-800={notif.type == NotifType.error}
         >
-            <p class="w-[90%] whitespace-pre-wrap text-sm"> {notif.msg} </p>
-            <button class="h-[100%] flex justify-center items-center" onclick={() => delNotifById(notif.id)}>
-                <img src="/close.svg" alt="close" />
+            <button class="h-full w-full flex justify-center items-center" onclick={() => delNotifById(notif.id)}>
+                <p class="whitespace-pre-wrap text-xs"> {notif.msg} </p>
             </button>
         </div>
     {/each}
 </div>
 
-{#if data.admin}
+{#if admin}
     <button
-        class="absolute top-0 right-0 m-2 text-blue-300"
+        class="absolute top-0 right-0 m-2 text-blue-300 text-sm"
         onclick={() => {
             deleteCookie("token");
             window.location.reload();
         }}>
-        Admin Logout
+        Admin <br>
+        Logout
     </button>
 {/if}
 
@@ -280,59 +281,58 @@ onMount(async () => {
     <a href="https://www.ikon.church">
         <img class="h-10" src="/IKON-Logo.png" alt="IKON" />
     </a>
-    <p class="text-xs">Prayer and Praise Requests</p>
+    <p class="text-xs"> Prayer and Praise Requests </p>
 </div>
 
-<div class="max-h-[90svh] flex flex-col items-center mx-2">
-    {#if loading}
-        <div class="h-60 centered container-bg flex-center text-sm italic">
-            <p> Loading... </p>
-        </div>
-    {:else}
-        <div class="centered min-h-[10rem] max-h-[80svh] overflow-auto p-2 py-3 container-bg">
+{#if loading}
+    <div class="h-60 centered container-border flex-center text-sm italic">
+        <p> Loading... </p>
+    </div>
+{:else}
+    <div class="flex flex-col items-center mx-2">
+        <div class="centered min-h-[10rem] max-h-[80svh] py-3 overflow-auto container-border">
             <div class="flex flex-col gap-2">
                 <!-- PostList -->
                 {#each posts as post (post.id)}
                     <div
-                        class="w-full flex"
+                        class="flex"
                         in:fade={{ delay: 200, duration: 200 }}
                         out:fade={{ duration: 200 }}
                         animate:flip={{ delay: 200, duration: 200 }}
                     >
                         <div class="text-sm mr-2 self-center"> {postTypeEmoji(post.postType)} </div>
                         <div class="bg-gray-600 rounded h-fit my-auto">
-                            <p style="overflow-wrap: break-word;" class="text-base whitespace-pre-wrap p-1 px-2">
+                            <p style="overflow-wrap: break-word;" class="truncate text-base whitespace-pre-wrap p-1 px-2">
                                 {post.text}
                             </p>
                         </div>
-                        <div class="ml-2 flex flex-col w-fit gap-1">
-                            <div class="h-full" class:w-12={editing(post.id) || data.admin || editable(post.id)}>
+                        <div class="ml-2 flex flex-col w-fit gap-[1px]">
+                            <div class="h-full" class:w-12={editing(post.id) || admin || editable(post.id)}>
                                 <div class="flex gap-2">
-                                    {#if data.admin}
+                                    {#if admin}
                                         <button
                                             onclick={() => deletePost(post.id)}
-                                            class="w-fit bg-red-400 rounded border border-transparent">
-                                            <img src="/trash.svg" alt="trash" />
+                                            class="w-fit bg-red-400 p-[3px] rounded-border-transp">
+                                            <img width="13" src="/trash.svg" alt="trash" />
                                         </button>
                                     {/if}
                                     {#if editing(post.id)}
                                         <button
                                             onclick={() => abortPostEdit()}
-                                            class="w-fit bg-red-400 p-1 flex-center gap-1 rounded border border-transparent">
-                                            <img width="10" src="/close.svg" alt="" />
-                                            <!-- <p class="text-black text-sm leading-none"> Cancel </p> -->
+                                            class="w-fit bg-red-400 p-1 rounded-border-transp">
+                                            <img width="10" src="/close.svg" alt="close" />
                                         </button>
-                                    {:else if data.admin || editable(post.id)}
+                                    {:else if admin || editable(post.id)}
                                         <button
                                             onclick={() => startEdit(post.id)}
-                                            class="bg-blue-400 p-1 flex-center rounded border border-transparent">
+                                            class="w-fit bg-blue-400 p-1 rounded-border-transp">
                                             <img width="10" src="/edit.svg" alt="edit" />
                                         </button>
                                     {/if}
                                 </div>
                             </div>
                             <p class="text-xs text-gray-300 w-fit whitespace-pre-wrap">
-                                {moment(post.createdAt).format("ddd Do MMM")}
+                                {moment(post.createdAt).format("ddd Do")}
                             </p>
                         </div>
                     </div>
@@ -344,13 +344,13 @@ onMount(async () => {
             </div>
 
             {#if oldPosts.length != 0}
-                <div class="relative h-[36px] my-1 ml-1">
+                <div class="relative h-[36px] ml-1">
                     <button
                         class="h-full w-full"
                         onclick={() => oldPostsShown = !oldPostsShown}
                         out:fade={{ delay: 300, duration: 0 }}
                     >
-                        <div class="p-2 absolute -top-0 -left-[0.7rem] flex items-center gap-[0.5rem] cursor-pointer text-sm w-full">
+                        <div class="p-2 absolute top-0 -left-[0.7rem] flex items-center gap-[0.5rem] cursor-pointer text-sm w-full">
                             {#if oldPostsShown}
                                 <img src="/caret-down.svg" alt="caret-down" />
                             {:else}
@@ -383,7 +383,7 @@ onMount(async () => {
                                 </div>
                                 <div class="mx-2 flex flex-col w-fit">
                                     <div class="h-full">
-                                        {#if data.admin}
+                                        {#if admin}
                                             <button
                                                 onclick={() => deletePost(post.id)}
                                                 class="bg-red-400 rounded border border-transparent">
@@ -392,7 +392,7 @@ onMount(async () => {
                                         {/if}
                                     </div>
                                     <p class="text-xs text-gray-300 w-fit whitespace-pre-wrap">
-                                        {moment(post.createdAt).format("ddd Do MMM")}
+                                        {moment(post.createdAt).format("ddd Do")}
                                     </p>
                                 </div>
                             </div>
@@ -406,82 +406,85 @@ onMount(async () => {
                 </div>
             {/if}
         </div>
-    {/if}
 
-    <div class="w-full mt-3 mb-3 lg:mx-50 flex-center">
-        {#if currentState == States.submit}
-            <div
-                class="flex-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
-                <div class="loader"></div>
-            </div>
+        <div 
+            in:fly={{ y: -20, delay: 200, duration: 500 }}
+            class="w-full mt-3 mb-3 lg:mx-50 flex-center">
 
-        {:else if currentState == States.select}
-            <div
-                class="flex justify-between items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
-                <SelectButton
-                    onclick={(e) => { postType = "PrayerRequest"; submitForm(e); }}
-                    emoji={"🙏"}
-                    str="Prayer Request"
-                />
-                <button
-                    class="w-8 h-full mx-5 rounded"
-                    onclick={() => { currentState = States.textarea; }}>
-                    <img
-                        id="errorSvg"
-                        src="/error.svg"
-                        alt="error img"
-                        class="w-full"
+            {#if currentState == States.submit}
+                <div
+                    class="flex-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
+                    <div class="loader"></div>
+                </div>
+
+            {:else if currentState == States.select}
+                <div
+                    class="flex justify-between items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
+                    <SelectButton
+                        onclick={(e) => { postType = "PrayerRequest"; submitForm(e); }}
+                        emoji={"🙏"}
+                        str="Prayer Request"
                     />
-                </button>
-                <SelectButton
-                    onclick={(e) => { postType = "PraiseReport"; submitForm(e); }}
-                    emoji={"🎉"}
-                    str="Praise Report"
-                />
-            </div>
-
-        {:else if currentState == States.textarea}
-            <div
-                class="relative w-full sm:w-[80%] h-fit p-2 rounded-lg border-2 border-gray-400 bg-gray-600 flex justify-between">
-                <textarea
-                    {disabled}
-                    bind:value={text}
-                    oninput={(e) => autoExpandTextarea(e.target)}
-                    onkeypress={submitOnShiftEnter}
-                    rows="1"
-                    placeholder=""
-                    id="textarea"
-                    class="bg-transparent w-full outline-none resize-none mr-[30px]"
-                    use:focusOnCreate
-                    maxlength="280"
-                ></textarea>
-                <button
-                    onclick={() => {
-                        if (text.trim() === "") { return errorAnimation(); }
-                        currentState = States.select;
-                    }}
-                    class="bg-transparent p-1 absolute top-[0.25rem] right-1">
-                    {#if submitErr}
+                    <button
+                        class="w-8 h-full mx-5 rounded"
+                        onclick={() => { currentState = States.textarea; }}>
                         <img
                             id="errorSvg"
                             src="/error.svg"
                             alt="error img"
-                            class="boop pos-y-wiggle"
+                            class="w-full"
                         />
-                    {:else}
-                        <img src="/send.svg" alt="send img"/>
-                    {/if}
-                </button>
-            </div>
+                    </button>
+                    <SelectButton
+                        onclick={(e) => { postType = "PraiseReport"; submitForm(e); }}
+                        emoji={"🎉"}
+                        str="Praise Report"
+                    />
+                </div>
 
-        {:else}
-            <button
-                onclick={() => {currentState = States.textarea}}
-                class="outline-none border-2 border-transparent hover:border-gray-400 bg-gray-600 rounded-lg h-[44px] w-full sm:w-[80%] p-2 text-sm"
-            > Submit Request </button>
-        {/if}
+            {:else if currentState == States.textarea}
+                <div
+                    class="relative w-full sm:w-[80%] h-fit p-2 rounded-lg border-2 border-gray-400 bg-gray-600 flex justify-between">
+                    <textarea
+                        {disabled}
+                        bind:value={text}
+                        oninput={(e) => autoExpandTextarea(e.target)}
+                        onkeypress={submitOnShiftEnter}
+                        rows="1"
+                        placeholder=""
+                        id="textarea"
+                        class="bg-transparent w-full outline-none resize-none mr-[30px]"
+                        use:focusOnCreate
+                        maxlength="280"
+                    ></textarea>
+                    <button
+                        onclick={() => {
+                            if (text.trim() === "") { return waitForErrorAnimation(); }
+                            currentState = States.select;
+                        }}
+                        class="bg-transparent p-1 absolute top-[0.25rem] right-1">
+                        {#if submitErr}
+                            <img
+                                id="errorSvg"
+                                src="/error.svg"
+                                alt="error img"
+                                class="boop pos-y-wiggle"
+                            />
+                        {:else}
+                            <img src="/send.svg" alt="send img"/>
+                        {/if}
+                    </button>
+                </div>
+
+            {:else}
+                <button
+                    onclick={() => {currentState = States.textarea}}
+                    class="outline-none border-2 border-transparent hover:border-gray-400 bg-gray-600 rounded-lg h-[44px] w-full sm:w-[80%] p-2 text-sm"
+                > Submit Request </button>
+            {/if}
+        </div>
     </div>
-</div>
+{/if}
 
 <style>
 .resize-none{
