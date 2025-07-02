@@ -284,12 +284,12 @@ onMount(async () => {
     <p class="text-xs"> Prayer and Praise Requests </p>
 </div>
 
-{#if loading}
-    <div class="h-60 centered container-border flex-center text-sm italic">
-        <p> Loading... </p>
-    </div>
-{:else}
-    <div class="flex flex-col items-center mx-2">
+<div class="flex flex-col items-center mx-2">
+    {#if loading}
+        <div class="h-60 centered container-border flex-center text-sm italic">
+            <p> Loading... </p>
+        </div>
+    {:else}
         <div class="centered min-h-[10rem] max-h-[80svh] py-3 overflow-auto container-border">
             <div class="flex flex-col gap-2">
                 <!-- PostList -->
@@ -483,8 +483,8 @@ onMount(async () => {
                 > Submit Request </button>
             {/if}
         </div>
-    </div>
-{/if}
+    {/if}
+</div>
 
 <style>
 .resize-none{
