@@ -213,8 +213,8 @@ function delNotifById(id: number) {
 }
 
 let intervalID = 0;
-let lastPoll = new Date();
 const interval = new Date().getDay() === 0 ? 10000 : 60000; // short on sundays
+let lastPoll = new Date();
 
 const pollingFunction = async function () {
     const res1: AxiosResponse = await axios
@@ -242,6 +242,9 @@ onMount(async () => {
     window.addEventListener("focus", () => {
         window.clearInterval(intervalID);
         intervalID = window.setInterval(pollingFunction, interval);
+    });
+    window.addEventListener("blur", () => {
+        window.clearInterval(intervalID);
     });
 });
 </script>
