@@ -185,6 +185,18 @@ function autoExpandTextarea(obj: any) {
 function focusOnCreate(el: HTMLTextAreaElement) {
     autoExpandTextarea(el);
     el.focus();
+
+    // scroll to textarea if not visible
+    const rect = el.getBoundingClientRect();
+    const viewHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
+    const visible = !(rect.bottom < 0 || rect.top - viewHeight >= 0);
+    if (!visible) {
+        window.scroll({
+            top: rect.top,
+            left: rect.bottom,
+            behavior: "smooth",
+        });
+    }
 }
 
 const NotifType = {
