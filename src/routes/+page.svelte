@@ -1,22 +1,24 @@
 <script lang="ts">
 import axios from '$lib/axios';
-import { onMount } from 'svelte';
-import { fly, slide, fade } from 'svelte/transition';
-import { flip } from 'svelte/animate';
 import moment from 'moment';
+import { flip } from 'svelte/animate';
+import { fly, slide, fade } from 'svelte/transition';
+import { onMount } from 'svelte';
 
+import PostAction from '$lib/PostAction.svelte';
 import SelectButton from '$lib/SelectButton.svelte';
 import { deleteCookie } from '$lib/cookie';
+import { editables } from "$lib/editable";
+import { postTypeEmoji } from '$lib/utils';
 
 import type { PageData } from './$types';
 import type { AxiosResponse } from 'axios';
 import type Prisma from '@prisma/client';
-import { postTypeEmoji } from '$lib/utils';
 
-let { data }: { data: PageData }  = $props();
-const admin = data.admin && data.admin.emailAddr != "";
-
-type PostType = PageData["posts"];
+type PostType = Prisma.Post[];
+let { data }: { data: PageData } = $props();
+const admin =
+    data.admin && data.admin.emailAddr && data.admin.emailAddr !== "";
 
 let loading = $state(true);
 let posts: PostType = $state([]);
@@ -34,9 +36,7 @@ async function getPosts() {
 }
 
 function parseDate(date: string | Date): Date {
-    if (typeof date === 'string') {
-        return new Date(date);
-    }
+    if (typeof date === 'string') return new Date(date);
     return date;
 }
 
@@ -50,47 +50,31 @@ function setPostListTo(updPosts: PostType): void {
     oldPosts = updPosts.filter(v => parseDate(v.createdAt) <= lastSunday);
 }
 
-async function deletePost(id: number) {
-    if (!window.confirm("Are you sure?")) {
-        return;
-    }
-
-    const res: AxiosResponse = await axios
-        .post("/api/delete-post", { id })
-        .then((res) => res)
-        .catch((err) => err.response);
-    if (res.status === 200) {
-        posts = posts.filter(v => v.id != id);
-    }
-}
-
-let userEditables: {id: string, postId: number}[] = [];
-
-function editable(postId: number): boolean {
-    return userEditables.find((el) => el.postId == postId) !== undefined;
-}
-
-// undefined for admin
-let currentEdit: {editId: string | undefined, postId: number, postListIdx: number} | null = $state(null);
-const editing = (id: number) => currentEdit !== null && currentEdit.postId == id;
+let currentEdit: {
+    editId: string | undefined, // undefined for admin
+    postId: number,
+    postIndex: number
+} | null = $state(null);
 
 async function startEdit(postId: number) {
     if (currentEdit !== null) {
         return newNotification("Already editing", NotifType.warning, 2000);
     }
     if (text.trim() !== "") {
-        return newNotification("Unsubmitted request\nDelete to continue", NotifType.warning);
+        return newNotification("Unsubmitted request\nDelete text to continue", NotifType.warning);
     }
 
-    let idx = posts.findIndex(el => el.id == postId);
-    currentEdit = { postId, postListIdx: idx, editId: userEditables.find(el => el.postId == postId)?.id };
-
-    text = posts[idx].text;
+    let editId, postIndex = posts.findIndex(el => el.id == postId);
+    if (!admin) {
+        editId = editables.find(el => el.postId == postId)?.editId;
+    }
+    currentEdit = { editId, postId, postIndex };
+    text = posts[postIndex].text;
     currentState = States.textarea;
     postType = null;
 }
 
-async function completeEdit() {
+async function submitEdit() {
     const res: AxiosResponse = await axios
         .post("/api/edit-post", {
             editId: currentEdit!.editId,
@@ -107,15 +91,29 @@ async function completeEdit() {
         return;
     }
 
-    posts[currentEdit!.postListIdx] = res.data.post;
-    abortPostEdit();
+    posts[currentEdit!.postIndex] = res.data.post;
+    abortEdit();
 }
 
-async function abortPostEdit() {
+async function abortEdit() {
     currentEdit = null;
     text = "";
     postType = null;
     currentState = States.button;
+}
+
+async function deletePost(id: number) {
+    if (!window.confirm("Are you sure?")) {
+        return;
+    }
+
+    const res: AxiosResponse = await axios
+        .post("/api/delete-post", { id })
+        .then((res) => res)
+        .catch((err) => err.response);
+    if (res.status === 200) {
+        posts = posts.filter(v => v.id != id);
+    }
 }
 
 const States = {
@@ -143,9 +141,9 @@ function waitForErrorAnimation() {
     }, 1000);
 }
 
-async function submitForm(_event: Event) {
+async function submitNewPost(_event: Event) {
     if (currentEdit !== null) {
-        return completeEdit();
+        return submitEdit();
     }
 
     text = text.trim();
@@ -174,7 +172,7 @@ async function submitForm(_event: Event) {
     }
 
     let post = res.data.post;
-    userEditables.push({id: res.data.editId, postId: post.id});
+    editables.push({editId: res.data.editId, postId: post.id});
     posts.splice(0, 0, post); // insert at beginning
     text = "";
     currentState = States.button;
@@ -310,30 +308,14 @@ onMount(async () => {
                             </p>
                         </div>
                         <div class="ml-2 flex flex-col w-fit gap-[1px]">
-                            <div class="h-full" class:w-12={editing(post.id) || admin || editable(post.id)}>
-                                <div class="flex gap-2">
-                                    {#if admin}
-                                        <button
-                                            onclick={() => deletePost(post.id)}
-                                            class="w-fit bg-red-400 p-[3px] rounded-border-transp">
-                                            <img width="13" src="/trash.svg" alt="trash" />
-                                        </button>
-                                    {/if}
-                                    {#if editing(post.id)}
-                                        <button
-                                            onclick={() => abortPostEdit()}
-                                            class="w-fit bg-red-400 p-1 rounded-border-transp">
-                                            <img width="10" src="/close.svg" alt="close" />
-                                        </button>
-                                    {:else if admin || editable(post.id)}
-                                        <button
-                                            onclick={() => startEdit(post.id)}
-                                            class="w-fit bg-blue-400 p-1 rounded-border-transp">
-                                            <img width="10" src="/edit.svg" alt="edit" />
-                                        </button>
-                                    {/if}
-                                </div>
-                            </div>
+                            <PostAction
+                                {admin}
+                                postID={post.id}
+                                currentEditId={currentEdit?.postId}
+                                {startEdit}
+                                {abortEdit}
+                                {deletePost}
+                            />
                             <p class="text-xs text-gray-300 w-fit whitespace-pre-wrap">
                                 {moment(post.createdAt).format("ddd Do")}
                             </p>
@@ -385,15 +367,14 @@ onMount(async () => {
                                     </p>
                                 </div>
                                 <div class="mx-2 flex flex-col w-fit">
-                                    <div class="h-full">
-                                        {#if admin}
-                                            <button
-                                                onclick={() => deletePost(post.id)}
-                                                class="bg-red-400 rounded border border-transparent">
-                                                <img src="/trash.svg" alt="trash" />
-                                            </button>
-                                        {/if}
-                                    </div>
+                                    <PostAction
+                                        {admin}
+                                        postID={post.id}
+                                        currentEditId={currentEdit?.postId}
+                                        {startEdit}
+                                        {abortEdit}
+                                        {deletePost}
+                                    />
                                     <p class="text-xs text-gray-300 w-fit whitespace-pre-wrap">
                                         {moment(post.createdAt).format("ddd Do")}
                                     </p>
@@ -427,7 +408,7 @@ onMount(async () => {
             <div
                 class="flex justify-between items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
                 <SelectButton
-                    onclick={(e) => { postType = "PrayerRequest"; submitForm(e); }}
+                    onclick={(e) => { postType = "PrayerRequest"; submitNewPost(e); }}
                     emoji={"🙏"}
                     str="Prayer Request"
                 />
@@ -442,7 +423,7 @@ onMount(async () => {
                     />
                 </button>
                 <SelectButton
-                    onclick={(e) => { postType = "PraiseReport"; submitForm(e); }}
+                    onclick={(e) => { postType = "PraiseReport"; submitNewPost(e); }}
                     emoji={"🎉"}
                     str="Praise Report"
                 />
