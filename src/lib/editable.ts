@@ -1,10 +1,9 @@
 // Used on both the server and client
 //
-// Sent with post when created to mark the creator as able to edit (edit-able)
-// that post.
+// Sent with post when created to mark the creator as able to edit that post.
 //
 // TODO: add expiry date (too lazy rn)
-export let editables: { 
+export let editables: {
     editId: string;
     postId: number;
 }[] = [];

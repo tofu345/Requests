@@ -28,10 +28,8 @@ export const POST: RequestHandler = async function ({ request, locals }) {
     }
 
     let editAllowed =
-        value.editId !== undefined &&
-        editables.find((el) => el.editId == value.editId);
-
-    if (locals.admin || editAllowed) {
+        locals.admin || editables.find((el) => el.editId == value.editId);
+    if (editAllowed) {
         let post = null;
         try {
             post = await editPost(value.postId, value.text, value.postType);

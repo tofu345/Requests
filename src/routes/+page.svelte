@@ -15,14 +15,14 @@ import type { PageData } from './$types';
 import type { AxiosResponse } from 'axios';
 import type Prisma from '@prisma/client';
 
-type PostType = Prisma.Post[];
+type Posts = Prisma.Post[];
 let { data }: { data: PageData } = $props();
 const admin =
     data.admin && data.admin.emailAddr && data.admin.emailAddr !== "";
 
 let loading = $state(true);
-let posts: PostType = $state([]);
-let oldPosts: PostType = $state([]);
+let posts: Posts = $state([]);
+let oldPosts: Posts = $state([]);
 let oldPostsShown = $state(true);
 
 async function getPosts() {
@@ -40,7 +40,7 @@ function parseDate(date: string | Date): Date {
     return date;
 }
 
-function setPostListTo(updPosts: PostType): void {
+function setPostListTo(updPosts: Posts): void {
     let today = new Date();
     let dayOfWeek = today.getDay();
     let dayOfMonth = today.getDate() - (dayOfWeek == 0 ? 6 : dayOfWeek)
@@ -187,6 +187,7 @@ function focusOnCreate(el: HTMLTextAreaElement) {
     el.focus();
 
     // scroll to textarea if not visible
+    // https://stackoverflow.com/questions/5353934/check-if-element-is-visible-on-screen
     const rect = el.getBoundingClientRect();
     const viewHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
     const visible = !(rect.bottom < 0 || rect.top - viewHeight >= 0);
