@@ -6,7 +6,6 @@ import { fly, slide, fade } from 'svelte/transition';
 import { onMount } from 'svelte';
 
 import PostAction from '$lib/PostAction.svelte';
-import SelectButton from '$lib/SelectButton.svelte';
 import { deleteCookie } from '$lib/cookie';
 import { editables } from "$lib/editable";
 import { postTypeEmoji } from '$lib/utils';
@@ -14,10 +13,13 @@ import { postTypeEmoji } from '$lib/utils';
 import type { PageData } from './$types';
 import type { AxiosResponse } from 'axios';
 import type Prisma from '@prisma/client';
+import { maxTextLength } from '$lib/constants';
 
 type Posts = Prisma.Post[];
 let { data }: { data: PageData } = $props();
-const admin =
+
+// typescript sucks
+const admin : boolean =
     data.admin && data.admin.emailAddr && data.admin.emailAddr !== "";
 
 let loading = $state(true);
@@ -182,10 +184,12 @@ function autoExpandTextarea(obj: any) {
     obj.style.height = Math.min(obj.scrollHeight, 150) + "px";
 }
 
-function focusOnCreate(el: HTMLTextAreaElement) {
+async function focusOnCreate(el: HTMLTextAreaElement) {
     autoExpandTextarea(el);
     el.focus();
 
+    // wait for keyboard animation :|
+    await new Promise(resolve => setTimeout(resolve, 200));
     // scroll to textarea if not visible
     // https://stackoverflow.com/questions/5353934/check-if-element-is-visible-on-screen
     const rect = el.getBoundingClientRect();
@@ -291,15 +295,15 @@ onMount(async () => {
     </button>
 {/if}
 
-<div class="min-h-[5.2rem] h-[10dvh] pt-2 pb-2 w-full flex flex-col gap-1 justify-center items-center">
+<div class="min-h-[5.2rem] h-[10dvh] pt-2 w-full flex flex-col gap-1 justify-center items-center">
     <a href="https://www.ikon.church">
         <img class="h-10" src="/IKON-Logo.png" alt="IKON" />
     </a>
     <p class="text-xs"> Prayer and Praise Requests </p>
 </div>
 
-<div class="flex flex-col items-center mx-2">
-    <div class="centered min-h-60 max-h-[80dvh] py-3 overflow-auto container-border">
+<div class="flex flex-col items-center ml-1 mr-2">
+    <div class="centered min-h-60 max-h-[81dvh] pt-1 pb-3 overflow-auto">
         {#if loading}
             <div class="h-60 flex-center text-sm italic">
                 <p> Loading... </p>
@@ -314,13 +318,13 @@ onMount(async () => {
                         out:fade={{ duration: 200 }}
                         animate:flip={{ delay: 200, duration: 200 }}
                     >
-                        <div class="text-sm mr-2 self-center"> {postTypeEmoji(post.postType)} </div>
+                        <div class="text-lg mr-1 mt-1"> {postTypeEmoji(post.postType)} </div>
                         <div class="bg-gray-600 rounded h-fit my-auto">
                             <p style="overflow-wrap: break-word;" class="truncate text-base whitespace-pre-wrap p-1 px-2">
                                 {post.text}
                             </p>
                         </div>
-                        <div class="ml-2 flex flex-col w-fit gap-[1px]">
+                        <div class="ml-[0.4rem] flex flex-col justify-between w-fit gap-[1px]">
                             <PostAction
                                 {admin}
                                 postID={post.id}
@@ -407,44 +411,47 @@ onMount(async () => {
 </div>
 
 {#if !loading}
-    <div
-        in:fly={{ y: -20, delay: 200, duration: 500 }}
-        class="w-full px-2 mt-3 mb-3 lg:mx-50 flex-center">
-
+    <div class="w-full px-2 mt-2 mb-3 lg:mx-50 flex-center">
         {#if currentState == States.submit}
             <div
-                class="flex-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
+                class="state-button flex-center px-1 text-sm">
                 <div class="loader"></div>
             </div>
 
         {:else if currentState == States.select}
             <div
-                class="flex justify-between items-center bg-gray-600 rounded-lg h-[60px] w-full sm:w-[80%] px-1 text-sm">
-                <SelectButton
-                    onclick={(e) => { postType = "PrayerRequest"; submitNewPost(e); }}
-                    emoji={"🙏"}
-                    str="Prayer Request"
-                />
+                class="state-button flex justify-between items-center text-sm">
                 <button
-                    class="w-8 h-full mx-5 rounded"
+                    onclick={(e) => { postType = "PrayerRequest"; submitNewPost(e); }}
+                    class="relative p-1 h-full w-[50%] flex justify-center items-center gap-2
+                        rounded-md cursor-pointer"
+                    >
+                        <p class="text-lg"> 🙏 </p>
+                        <p class="text-md"> Prayer </p>
+                </button>
+                <button
+                    class="w-8 h-fit mx-5 rounded"
                     onclick={() => { currentState = States.textarea; }}>
                     <img
+                        width="25"
                         id="errorSvg"
                         src="/error.svg"
                         alt="error img"
-                        class="w-full"
                     />
                 </button>
-                <SelectButton
+                <button
                     onclick={(e) => { postType = "PraiseReport"; submitNewPost(e); }}
-                    emoji={"🎉"}
-                    str="Praise Report"
-                />
+                    class="relative p-1 h-full w-[50%] flex justify-center items-center gap-2
+                        rounded-md cursor-pointer"
+                    >
+                        <p class="text-lg"> 🎉 </p>
+                        <p class="text-md"> Praise </p>
+                </button>
             </div>
 
         {:else if currentState == States.textarea}
             <div
-                class="relative w-full sm:w-[80%] h-fit p-2 rounded-lg border-2 border-gray-400 bg-gray-600 flex justify-between">
+                class="state-button relative p-2 flex justify-between">
                 <textarea
                     {disabled}
                     bind:value={text}
@@ -455,14 +462,14 @@ onMount(async () => {
                     id="textarea"
                     class="bg-transparent w-full outline-none resize-none mr-[30px]"
                     use:focusOnCreate
-                    maxlength="280"
+                    maxlength="{maxTextLength}"
                 ></textarea>
                 <button
                     onclick={() => {
                         if (text.trim() === "") { return waitForErrorAnimation(); }
                         currentState = States.select;
                     }}
-                    class="bg-transparent p-1 absolute top-[0.25rem] right-1">
+                    class="bg-transparent p-1 absolute top-[0.15rem] right-1">
                     {#if submitErr}
                         <img
                             id="errorSvg"
@@ -479,8 +486,10 @@ onMount(async () => {
         {:else}
             <button
                 onclick={() => {currentState = States.textarea}}
-                class="outline-none border-2 border-transparent hover:border-gray-400 bg-gray-600 rounded-lg h-[44px] w-full sm:w-[80%] p-2 text-sm"
-            > Submit Request </button>
+                class="state-button p-2 text-sm flex items-center justify-center"
+            >
+                Submit Request
+            </button>
         {/if}
     </div>
 {/if}
@@ -491,8 +500,8 @@ onMount(async () => {
 }
 
 .loader {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border: 2px solid lightgray;
     border-bottom-color: transparent;
     border-radius: 50%;

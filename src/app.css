@@ -12,9 +12,8 @@
     }
 }
 
-.container-border {
-    border: 0px solid transparent;
-    @apply border border-t-gray-500 border-b-gray-500;
+.state-button {
+    @apply outline-none border-2 border-gray-500 bg-gray-600 rounded-lg h-[42px] w-full sm:w-[80%]
 }
 
 .flex-center {
@@ -27,7 +26,7 @@
 
 /* width */
 ::-webkit-scrollbar {
-    width: 15px;
+    width: 7px;
 }
 
 /* Track */
@@ -37,8 +36,8 @@
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-    margin-right: 7px;
-    width: 12px;
+    margin-right: 3px;
+    width: 3px;
     border: 3px solid transparent;
     background-clip: padding-box;
     @apply rounded-lg bg-gray-500

@@ -15,29 +15,32 @@ let {
     admin, postID, currentEditId,
     startEdit, deletePost, abortEdit
 }: Props = $props();
+
+const imageWidth = 12.25;
+const imageClass = "w-fit p-[2px] rounded-border-transp";
 </script>
 
-<div class="h-full w-12">
-    <!-- There is a reason for these 2 divs future me -->
-    <div class="flex gap-2">
+<div class="h-5">
+    <!-- There is a reason for these 2 divs, future me -->
+    <div class="flex flex-wrap gap-2">
         {#if admin}
             <button
                 onclick={() => deletePost(postID)}
-                class="w-fit bg-red-400 p-[3px] rounded-border-transp">
-                <img width="13" src="/trash.svg" alt="delete" />
+                class="{imageClass} bg-red-400">
+                <img width="{imageWidth}" src="/trash.svg" alt="delete" />
             </button>
         {/if}
         {#if currentEditId && postID == currentEditId}
             <button
                 onclick={() => abortEdit(postID)}
-                class="w-fit bg-red-400 p-1 rounded-border-transp">
-                <img width="10" src="/close.svg" alt="close" />
+                class="{imageClass} bg-red-400">
+                <img width="{imageWidth}" src="/close.svg" alt="close" />
             </button>
         {:else if admin || editable(postID)}
             <button
                 onclick={() => startEdit(postID)}
-                class="w-fit bg-blue-400 p-1 rounded-border-transp">
-                <img width="10" src="/edit.svg" alt="edit" />
+                class="{imageClass} bg-blue-400">
+                <img width="{imageWidth}" src="/edit.svg" alt="edit" />
             </button>
         {/if}
     </div>

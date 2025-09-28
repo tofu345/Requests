@@ -7,9 +7,10 @@ import { makeEditId, editables } from "$lib/editable";
 // js skill issues
 import { Prisma as PrismaObj } from "@prisma/client";
 import Prisma from "@prisma/client";
+import { maxTextLength } from "$lib/constants";
 
 const postSchema = Joi.object({
-    text: Joi.string().max(280).required(),
+    text: Joi.string().max(maxTextLength).required(),
     postType: Joi.string()
         .valid(...Object.values(Prisma.PostType))
         .required(),
