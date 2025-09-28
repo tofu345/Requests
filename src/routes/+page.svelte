@@ -445,7 +445,9 @@ onMount(async () => {
 
         {:else if currentState == States.textarea}
             <div
-                class="state-button relative p-2 flex justify-between">
+                class="state-button relative p-2 flex justify-between"
+                style="height: fit-content;"
+            >
                 <textarea
                     {disabled}
                     bind:value={text}
@@ -463,7 +465,7 @@ onMount(async () => {
                         if (text.trim() === "") { return waitForErrorAnimation(); }
                         currentState = States.select;
                     }}
-                    class="bg-transparent p-1 absolute top-[0.15rem] right-1">
+                    class="bg-transparent p-1 absolute top-[0.25rem] right-1">
                     {#if submitErr}
                         <img
                             id="errorSvg"
