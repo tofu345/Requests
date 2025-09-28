@@ -375,15 +375,13 @@ onMount(async () => {
                                 out:fade={{ duration: 200 }}
                                 animate:flip={{ delay: 200, duration: 200 }}
                             >
-                                <div class="text-sm mr-2 self-center"> {postTypeEmoji(post.postType)} </div>
+                                <div class="text-lg mr-1 mt-1"> {postTypeEmoji(post.postType)} </div>
                                 <div class="bg-gray-600 rounded h-fit my-auto">
-                                    <p
-                                        style="overflow-wrap: break-word;"
-                                        class="whitespace-pre-wrap p-1 px-2">
+                                    <p style="overflow-wrap: break-word;" class="truncate text-base whitespace-pre-wrap p-1 px-2">
                                         {post.text}
                                     </p>
                                 </div>
-                                <div class="mx-2 flex flex-col w-fit">
+                                <div class="ml-[0.4rem] flex flex-col justify-between w-fit gap-[1px]">
                                     <PostAction
                                         {admin}
                                         postID={post.id}
@@ -396,10 +394,6 @@ onMount(async () => {
                                         {moment(post.createdAt).format("ddd Do")}
                                     </p>
                                 </div>
-                            </div>
-                        {:else}
-                            <div class="w-full h-36 flex-center text-sm italic">
-                                None yet...
                             </div>
                         {/each}
                     </div>
