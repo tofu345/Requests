@@ -20,11 +20,14 @@ let { data }: { data: PageData } = $props();
 
 // typescript sucks
 const admin : boolean =
-    data.admin && data.admin.emailAddr && data.admin.emailAddr !== "";
+    data.admin !== null && data.admin.emailAddr !== "";
 
 let loading = $state(true);
-let posts: Posts = $state([]);
-let oldPosts: Posts = $state([]);
+
+let postList: Posts = [];         // all posts
+let posts: Posts = $state([]);    // created this past week
+let oldPosts: Posts = $state([]); // older posts
+
 let oldPostsShown = $state(true);
 
 async function getPosts() {
@@ -48,6 +51,7 @@ function setPostListTo(updPosts: Posts): void {
     let dayOfMonth = today.getDate() - (dayOfWeek == 0 ? 6 : dayOfWeek)
     let lastSunday = new Date(today.getFullYear(), today.getMonth(), dayOfMonth, 0, 0, 0);
 
+    postList = updPosts;
     posts = updPosts.filter(v => parseDate(v.createdAt) > lastSunday);
     oldPosts = updPosts.filter(v => parseDate(v.createdAt) <= lastSunday);
 }
@@ -66,12 +70,13 @@ async function startEdit(postId: number) {
         return newNotification("Unsubmitted request\nDelete text to continue", NotifType.warning);
     }
 
-    let editId, postIndex = posts.findIndex(el => el.id == postId);
+    let editId, postIndex = postList.findIndex(el => el.id == postId);
     if (!admin) {
         editId = editables.find(el => el.postId == postId)?.editId;
     }
     currentEdit = { editId, postId, postIndex };
-    text = posts[postIndex].text;
+
+    text = postList[postIndex].text;
     currentState = States.textarea;
     postType = null;
 }
@@ -93,7 +98,7 @@ async function submitEdit() {
         return;
     }
 
-    posts[currentEdit!.postIndex] = res.data.post;
+    postList[currentEdit!.postIndex] = res.data.post;
     abortEdit();
 }
 
@@ -114,7 +119,8 @@ async function deletePost(id: number) {
         .then((res) => res)
         .catch((err) => err.response);
     if (res.status === 200) {
-        posts = posts.filter(v => v.id != id);
+        postList = postList.filter(v => v.id != id);
+        setPostListTo(postList);
     }
 }
 
