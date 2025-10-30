@@ -2,5 +2,5 @@ import { getPosts } from "$lib/prisma";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
-    return { admin: locals.admin };
+    return { admin: locals.admin || null };
 };

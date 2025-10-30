@@ -19,8 +19,7 @@ type Posts = Prisma.Post[];
 let { data }: { data: PageData } = $props();
 
 // typescript sucks
-const admin : boolean =
-    data.admin !== null && data.admin.emailAddr && data.admin.emailAddr !== "";
+const admin : boolean = data.admin !== null && data.admin !== "";
 
 let loading = $state(true);
 

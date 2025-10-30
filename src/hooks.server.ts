@@ -6,7 +6,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     if (token) {
         const email = verifyToken(token);
         if (email) {
-            event.locals.admin = { emailAddr: email };
+            event.locals.admin = email;
         }
     }
 
