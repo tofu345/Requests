@@ -20,9 +20,7 @@ let { data }: { data: PageData } = $props();
 
 // typescript sucks
 const admin : boolean =
-    data.admin !== null
-    && data.admin.emailAddr !== undefined
-    && data.admin.emailAddr !== "";
+    data.admin !== null && data.admin.emailAddr && data.admin.emailAddr !== "";
 
 let loading = $state(true);
 
