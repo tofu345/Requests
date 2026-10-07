@@ -4,10 +4,10 @@ import { PrismaClient } from "@prisma/client";
 import type Prisma from "@prisma/client";
 
 const prisma = new PrismaClient();
-export let cache: Prisma.Post[] | null = null;
+let cache: Prisma.Post[] | null = null;
 export let lastChange: Date = new Date(); // last (create, edit, delete) made
 
-export function clearCache() {
+function clearCache() {
     cache = null;
     lastChange = new Date();
 }

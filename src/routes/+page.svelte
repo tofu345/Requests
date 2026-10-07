@@ -17,7 +17,7 @@ type Posts = Prisma.Post[];
 
 let { data }: { data: PageData } = $props();
 
-const isAdmin: boolean = data.admin !== null && data.admin !== "";
+const isAdmin = data.admin !== null && data.admin !== "";
 
 let posts: Posts = $state([]);
 let oldPosts: Posts = $state([]);
@@ -63,10 +63,24 @@ let textAreaDisabled = $derived(currentState == States.submit);
 let postType: Prisma.PostType | null = null;
 let submitError = $state(false);
 
+let lastPoll = new Date();
+
 let currentEdit: number | null = $state(null);
 // see `src/lib/server/editable.ts`
 let edits: Map<number, Edit> = $state(new Map());
 
+function getEditIds() {
+    const data = localStorage.getItem('editable');
+    if (data) {
+        const editsArray: [number, Edit][] = JSON.parse(data);
+        for (const [id, edit] of editsArray) {
+            // keep valid edits
+            if (new Date() < parseDate(edit.expiration)) {
+                edits.set(id, edit);
+            }
+        }
+    }
+}
 function storeEditIds() {
     localStorage.setItem('editable', JSON.stringify(Array.from(edits.entries())));
 }
@@ -88,9 +102,6 @@ async function startEdit(postId: number) {
         return newNotification("The post you are trying to edit is nowhere to be found",
                                NotifType.error);
     }
-
-    let editId = undefined;
-    if (!isAdmin) editId = edits.get(postId);
 
     currentEdit = post.id;
     textArea = post.text;
@@ -137,6 +148,7 @@ async function submitEdit() {
         }
     }
 
+    lastPoll = new Date();
     resetInput();
 }
 
@@ -159,6 +171,7 @@ async function deletePost(id: number) {
     if (res.status === 200) {
         posts = posts.filter(v => v.id != id);
         oldPosts = oldPosts.filter(v => v.id != id);
+        lastPoll = new Date();
     }
 }
 
@@ -216,6 +229,7 @@ async function submitNewPost(_event: Event) {
     // insert at beginning
     posts.splice(0, 0, post);
 
+    lastPoll = new Date();
     resetInput();
 }
 
@@ -270,7 +284,6 @@ function deleteNotification(id: number) {
 
 let intervalID = 0;
 const interval = new Date().getDay() === 0 ? 10000 : 60000; // short on sundays
-let lastPoll = new Date();
 
 const pollingFunction = async function () {
     const res: AxiosResponse = await axios
@@ -292,16 +305,7 @@ const pollingFunction = async function () {
 let loading = $state(true);
 
 onMount(async () => {
-    const previous = localStorage.getItem('editable');
-    if (previous) {
-        const editsArray: [number, Edit][] = JSON.parse(previous);
-        for (const [id, edit] of editsArray) {
-            // keep valid edits
-            if (new Date() < parseDate(edit.expiration)) {
-                edits.set(id, edit);
-            }
-        }
-    }
+    getEditIds();
 
     await fetchPosts();
     loading = false;
@@ -459,7 +463,7 @@ onMount(async () => {
                         <p class="text-md"> Prayer </p>
                 </button>
                 <button
-                    class="w-8 h-fit mx-5 rounded"
+                    class="w-28 h-full rounded flex justify-center items-center"
                     onclick={() => { currentState = States.textarea; }}>
                     <img
                         width="25"
